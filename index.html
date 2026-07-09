@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Reader — Turn Cluttered Articles into Beautiful Distraction-Free Text</title>
+    <meta name="description" content="An elegant, high-performance, offline-first Chrome Extension that cleans web pages, removes ads, and formats articles for ultimate readability.">
+    
+    <!-- Google Fonts: Plus Jakarta Sans for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            DEFAULT: '#00ff9d',
+                            glow: 'rgba(0, 255, 157, 0.15)',
+                            dark: '#030712',
+                            card: '#0b0f19',
+                            border: 'rgba(255, 255, 255, 0.08)',
+                            textMuted: '#9ca3af'
+                        }
+                    },
+                    animation: {
+                        'float-slow': 'float 8s ease-in-out infinite',
+                        'float-delayed': 'float 8s ease-in-out infinite 4s',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+                            '50%': { transform: 'translateY(-15px) rotate(2deg)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #030712;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f2937;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00ff9d;
+        }
+
+        /* Iridescent / Glassmorphism Effects */
+        .glass-panel {
+            background: rgba(11, 15, 25, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .iridescent-glow {
+            background: linear-gradient(135deg, rgba(0, 255, 157, 0.12) 0%, rgba(124, 58, 237, 0.08) 50%, rgba(0, 240, 255, 0.12) 100%);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        /* 3D Perspective & Isometric Rotations */
+        .perspective-container {
+            perspective: 1200px;
+        }
+        .isometric-left {
+            transform: rotateY(18deg) rotateX(12deg) rotateZ(-6deg);
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .isometric-right {
+            transform: rotateY(-18deg) rotateX(12deg) rotateZ(6deg);
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .isometric-left:hover {
+            transform: rotateY(8deg) rotateX(6deg) rotateZ(-2deg) scale(1.02);
+        }
+        .isometric-right:hover {
+            transform: rotateY(-8deg) rotateX(6deg) rotateZ(2deg) scale(1.02);
+        }
+
+        /* Text selection */
+        ::selection {
+            background: #00ff9d;
+            color: #030712;
+        }
+    </style>
+</head>
+<body class="bg-brand-dark text-white font-sans antialiased selection:bg-brand selection:text-brand-dark overflow-x-hidden">
+
+    <!-- HEADER SYSTEM -->
+    <header class="fixed top-0 left-0 right-0 z-40 glass-panel border-b border-brand-border">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <a href="#" class="flex items-center gap-3 group" aria-label="Focus Reader Home">
+                <div class="relative w-10 h-10 rounded-xl bg-gradient-to-tr from-brand to-emerald-400 flex items-center justify-center shadow-[0_0_20px_rgba(0,255,157,0.3)] group-hover:scale-105 transition-transform">
+                    <svg class="w-5 h-5 text-brand-dark" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-lg font-extrabold tracking-tight block">FOCUS READER</span>
+                    <span class="text-[10px] text-brand tracking-widest uppercase font-semibold block -mt-1">Chrome Extension</span>
+                </div>
+            </a>
+
+            <!-- Navigation Links -->
+            <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-300">
+                <a href="#features" class="hover:text-brand transition-colors">Features</a>
+                <a href="#preview" class="hover:text-brand transition-colors">Interactive Preview</a>
+                <a href="#specs" class="hover:text-brand transition-colors">Specifications</a>
+                <a href="#download" class="hover:text-brand transition-colors">Install</a>
+            </nav>
+
+            <!-- Utility Controls (RTL Toggle & Action Button) -->
+            <div class="flex items-center gap-4">
+                <!-- RTL/LTR Language Switcher -->
+                <button id="lang-toggle" class="px-3 py-1.5 rounded-lg border border-brand-border text-xs font-semibold hover:border-brand hover:text-brand transition-all flex items-center gap-1.5" aria-label="Toggle Language / Switch to Arabic">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-.778.099-1.533.284-2.253" />
+                    </svg>
+                    <span id="lang-text">العربية (AR)</span>
+                </button>
+
+                <a href="#download" class="hidden sm:inline-flex items-center gap-2 bg-brand hover:bg-emerald-400 text-brand-dark px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-[0_4px_20px_rgba(0,255,157,0.25)] hover:shadow-[0_4px_25px_rgba(0,255,157,0.4)]">
+                    <span>Add to Chrome</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN INTERACTIVE CONTENT LAYOUT -->
+    <main id="main-content" class="pt-20">
+
+        <!-- COMPONENT 1: HERO SECTION & FLOATING ASSETS -->
+        <section class="relative min-h-[90vh] flex items-center justify-center py-20 px-6 overflow-hidden">
+            <!-- Background Iridescent Spheres & Blurs -->
+            <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-brand/10 rounded-full blur-[120px] animate-pulse-slow pointer-events-none"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[150px] animate-pulse-slow pointer-events-none"></div>
+
+            <!-- Floating Asset Array (Left) -->
+            <div class="absolute left-10 top-1/3 hidden xl:block w-72 glass-panel p-5 rounded-2xl animate-float-slow pointer-events-none">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                    <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                </div>
+                <div class="h-2 bg-gray-700 rounded-full w-3/4 mb-3"></div>
+                <div class="h-2 bg-gray-700 rounded-full w-1/2 mb-4"></div>
+                <div class="space-y-2">
+                    <div class="h-3 bg-brand/20 rounded-full w-full"></div>
+                    <div class="h-3 bg-brand/20 rounded-full w-5/6"></div>
+                    <div class="h-3 bg-brand/20 rounded-full w-4/5"></div>
+                </div>
+                <div class="mt-4 flex justify-between items-center text-[10px] text-brand">
+                    <span>✦ Distraction Free</span>
+                    <span>100% Offline</span>
+                </div>
+            </div>
+
+            <!-- Floating Asset Array (Right) -->
+            <div class="absolute right-10 bottom-1/4 hidden xl:block w-72 glass-panel p-5 rounded-2xl animate-float-delayed pointer-events-none">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-xs text-gray-400 font-bold">Typography Engine</span>
+                    <span class="text-xs text-brand">Aa</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    <div class="h-8 rounded bg-gray-800 border border-brand-border flex items-center justify-center text-[10px]">Serif</div>
+                    <div class="h-8 rounded bg-brand text-brand-dark font-bold flex items-center justify-center text-[10px]">Sans</div>
+                    <div class="h-8 rounded bg-gray-800 border border-brand-border flex items-center justify-center text-[10px]">Mono</div>
+                </div>
+                <div class="space-y-1">
+                    <div class="h-1.5 bg-gray-700 rounded-full w-full"></div>
+                    <div class="h-1.5 bg-gray-700 rounded-full w-11/12"></div>
+                </div>
+            </div>
+
+            <!-- Hero Central Content -->
+            <div class="max-w-4xl mx-auto text-center relative z-10">
+                <!-- Badge -->
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel border border-brand/20 text-brand text-xs font-bold mb-8 uppercase tracking-widest animate-bounce">
+                    <span class="w-2 h-2 rounded-full bg-brand animate-ping"></span>
+                    <span id="hero-badge">Zero Trackers. Pure Reading.</span>
+                </div>
+
+                <!-- Main Heading -->
+                <h1 id="hero-title" class="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-[1.1] bg-gradient-to-r from-white via-gray-100 to-gray-400 bg-clip-text text-transparent">
+                    Turn cluttered articles into clean, distraction-free text.
+                </h1>
+
+                <!-- Subtitle / Description -->
+                <p id="hero-desc" class="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+                    Say goodbye to ads, cookie popups, and visual clutter. Experience high-performance, private, offline-first reading with a single click.
+                </p>
+
+                <!-- Dual Pill CTA Trigger Buttons -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <a href="#download" class="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-brand hover:bg-emerald-400 text-brand-dark px-8 py-4 rounded-full font-extrabold text-base transition-all shadow-[0_8px_30px_rgba(0,255,157,0.3)] hover:shadow-[0_8px_35px_rgba(0,255,157,0.5)] transform hover:-translate-y-0.5">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z"/>
+                        </svg>
+                        <span id="cta-primary">Add to Chrome — It's Free</span>
+                    </a>
+                    <a href="#preview" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-transparent hover:bg-white/5 border border-brand-border hover:border-brand/40 px-8 py-4 rounded-full font-bold text-base transition-all">
+                        <span id="cta-secondary">Try Interactive Demo</span>
+                    </a>
+                </div>
+
+                <!-- Trust Stats -->
+                <div class="mt-16 pt-8 border-t border-brand-border/40 grid grid-cols-3 gap-4 max-w-xl mx-auto text-center">
+                    <div>
+                        <span class="block text-2xl font-extrabold text-brand">0kb</span>
+                        <span id="stat-1" class="text-xs text-gray-500 uppercase tracking-wider">Data Transmitted</span>
+                    </div>
+                    <div>
+                        <span class="block text-2xl font-extrabold text-brand">100%</span>
+                        <span id="stat-2" class="text-xs text-gray-500 uppercase tracking-wider">Offline First</span>
+                    </div>
+                    <div>
+                        <span class="block text-2xl font-extrabold text-brand">0</span>
+                        <span id="stat-3" class="text-xs text-gray-500 uppercase tracking-wider">Trackers or Ads</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMPONENT 2: OVERLAPPING ISOMETRIC MOCKUP SECTION -->
+        <section id="preview" class="py-24 px-6 bg-gradient-to-b from-transparent via-brand-card to-transparent overflow-hidden">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 id="preview-title" class="text-3xl md:text-5xl font-extrabold mb-4">Cluttered Web vs. Clean Focus</h2>
+                    <p id="preview-desc" class="text-gray-400 max-w-2xl mx-auto">See how Focus Reader transforms chaotic, ad-heavy layouts into a beautiful, distraction-free typography system instantly.</p>
+                </div>
+
+                <!-- Overlapping Mockup Perspective Wrapper -->
+                <div class="perspective-container relative min-h-[500px] md:min-h-[600px] flex flex-col md:flex-row items-center justify-center gap-8 md:gap-0">
+                    
+                    <!-- Decorative background circle behind mockups -->
+                    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] md:w-[600px] h-[350px] md:h-[600px] bg-brand/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <!-- LEFT MOCKUP: The Cluttered Web (Before) -->
+                    <div class="w-full max-w-md md:absolute md:left-[5%] md:top-10 isometric-left z-10">
+                        <div class="glass-panel rounded-2xl shadow-2xl border border-red-500/20 overflow-hidden">
+                            <!-- Browser Top Bar -->
+                            <div class="bg-gray-950 px-4 py-3 flex items-center gap-2 border-b border-brand-border">
+                                <div class="flex gap-1.5">
+                                    <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+                                    <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+                                    <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+                                </div>
+                                <div class="bg-gray-900 text-[10px] text-red-400 px-3 py-1 rounded-md flex-1 text-center truncate font-mono">
+                                    ⚠️ https://cluttered-news-portal.com/article-09
+                                </div>
+                            </div>
+                            <!-- Mockup Body (Messy) -->
+                            <div class="p-5 h-80 bg-gray-900/40 relative overflow-hidden text-left">
+                                <!-- Banner Ad -->
+                                <div class="bg-red-950/40 border border-red-500/30 p-2 text-center rounded mb-4">
+                                    <span class="text-[9px] text-red-400 uppercase tracking-widest font-bold">SPONSORED AD: BUY NOW! 50% OFF! 🔥</span>
+                                </div>
+                                <h3 class="text-sm font-bold text-gray-300 mb-2">The Future of Digital Readability and Human Attention Span</h3>
+                                <p class="text-[10px] text-gray-500 mb-4 leading-relaxed">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at porttitor sem. Aliquam erat volutpat. Donec fringilla feugiat.</p>
+                                
+                                <!-- Sidebar popup ad -->
+                                <div class="absolute right-4 bottom-4 w-32 bg-yellow-950/40 border border-yellow-500/30 p-2 rounded shadow-lg text-center animate-bounce">
+                                    <span class="text-[8px] text-yellow-400 font-bold">Accept Cookies? 🍪</span>
+                                    <button class="block w-full mt-1 bg-yellow-500 text-black text-[8px] font-bold py-0.5 rounded">Accept All</button>
+                                </div>
+
+                                <!-- Video Ad Overlay -->
+                                <div class="absolute left-4 bottom-4 w-28 h-20 bg-gray-950 border border-gray-800 rounded flex items-center justify-center">
+                                    <span class="text-[8px] text-red-500 flex items-center gap-1">
+                                        <span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span> Video Ad (0:30)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-4">
+                            <span id="before-label" class="text-xs font-bold text-red-400 uppercase tracking-widest">Before: Distracted & Slow</span>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT MOCKUP: Clean Reader (After) -->
+                    <div class="w-full max-w-md md:absolute md:right-[5%] md:top-20 isometric-right z-20">
+                        <div class="glass-panel rounded-2xl shadow-2xl border border-brand/30 overflow-hidden">
+                            <!-- Browser Top Bar -->
+                            <div class="bg-gray-950 px-4 py-3 flex items-center gap-2 border-b border-brand-border">
+                                <div class="flex gap-1.5">
+                                    <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                                    <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                                </div>
+                                <div class="bg-gray-900 text-[10px] text-brand px-3 py-1 rounded-md flex-1 text-center truncate font-mono">
+                                    ✨ chrome-extension://focus-reader/clean.html
+                                </div>
+                            </div>
+                            <!-- Mockup Body (Clean) -->
+                            <div class="p-6 h-80 bg-[#080b11] text-left overflow-y-auto">
+                                <div class="max-w-xs mx-auto">
+                                    <div class="text-[10px] text-brand font-semibold mb-2 uppercase tracking-wider">Focus Reader Mode</div>
+                                    <h3 class="text-base font-extrabold text-white mb-4 leading-snug">The Future of Digital Readability and Human Attention Span</h3>
+                                    <p class="text-xs text-gray-300 leading-relaxed mb-4">
+                                        In an era dominated by flashing banners, auto-playing video streams, and aggressive tracking cookies, our collective attention span has faced unprecedented degradation.
+                                    </p>
+                                    <p class="text-xs text-gray-300 leading-relaxed">
+                                        Focus Reader processes the document structure directly inside your browser cache, isolating the semantic article node and formatting it with mathematically balanced typography metrics.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-4">
+                            <span id="after-label" class="text-xs font-bold text-brand uppercase tracking-widest">After: Pure Focus (0.01s Load)</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- COMPONENT 3: ALTERNATING FEATURE ROWS -->
+        <section id="features" class="py-24 px-6 relative">
+            <div class="max-w-7xl mx-auto space-y-32">
+                
+                <!-- Row A: Right-Aligned Text, Left-Aligned Security Vector -->
+                <div class="flex flex-col lg:flex-row items-center gap-16">
+                    <!-- Left: Minimalist Wireframe Device/Vector Layout -->
+                    <div class="w-full lg:w-1/2 relative flex items-center justify-center">
+                        <!-- Radial Tech Lines Background -->
+                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,255,157,0.08)_0%,transparent_70%)] pointer-events-none"></div>
+                        <div class="relative w-full max-w-md p-8 rounded-3xl glass-panel border border-brand-border">
+                            <!-- Security Shield SVG representation -->
+                            <div class="w-16 h-16 rounded-2xl bg-brand/10 flex items-center justify-center text-brand mb-6 shadow-[0_0_20px_rgba(0,255,157,0.15)]">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1333 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                                </svg>
+                            </div>
+                            <h4 class="text-lg font-bold mb-3">100% Client-Side Architecture</h4>
+                            <p class="text-sm text-gray-400 leading-relaxed mb-4">Focus Reader does not utilize external API endpoints. The parsing engine runs entirely inside your browser sandbox environment, ensuring absolute data isolation.</p>
+                            <div class="flex gap-2">
+                                <span class="px-2.5 py-1 bg-brand-dark rounded text-[10px] font-mono text-brand border border-brand/20">No Cloud Sync</span>
+                                <span class="px-2.5 py-1 bg-brand-dark rounded text-[10px] font-mono text-brand border border-brand/20">No External Calls</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Right: High-tier Typography -->
+                    <div class="w-full lg:w-1/2">
+                        <div class="text-brand text-xs font-bold uppercase tracking-widest mb-3">Institutional Privacy</div>
+                        <h3 id="row-a-title" class="text-3xl md:text-4xl font-extrabold mb-6 leading-tight">Zero Tracking, Zero Data Collection. Period.</h3>
+                        <p id="row-a-desc" class="text-gray-300 leading-relaxed mb-8">
+                            Unlike other extensions that harvest reading habits, browser history, and telemetry to monetize your data, Focus Reader operates with a strict Zero-Knowledge protocol. Your saved articles are kept locally on your device's isolated storage.
+                        </p>
+                        <ul class="space-y-4">
+                            <li class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-brand mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                <span>No account registration or login required</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-brand mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                <span>Complete compliance with Chrome Web Store safety guidelines</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Row B: Left-Aligned Text, Right-Aligned Circular Previews -->
+                <div class="flex flex-col lg:flex-row-reverse items-center gap-16">
+                    <!-- Right: Stacked Interface Previews -->
+                    <div class="w-full lg:w-1/2 relative flex items-center justify-center">
+                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.08)_0%,transparent_70%)] pointer-events-none"></div>
+                        <div class="relative w-full max-w-md h-80 flex items-center justify-center">
+                            <!-- Overlay Circle 1: Theme Selection -->
+                            <div class="absolute top-4 left-4 w-48 p-4 glass-panel rounded-2xl border border-brand-border shadow-xl transform -rotate-6">
+                                <span class="text-[10px] text-gray-400 block mb-2 font-bold uppercase tracking-wider">Palette</span>
+                                <div class="flex gap-2">
+                                    <div class="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center text-black text-xs font-bold">L</div>
+                                    <div class="w-8 h-8 rounded-full bg-[#f4ecd8] border border-gray-300 flex items-center justify-center text-amber-900 text-xs font-bold">S</div>
+                                    <div class="w-8 h-8 rounded-full bg-black border border-brand flex items-center justify-center text-brand text-xs font-bold">D</div>
+                                </div>
+                            </div>
+                            <!-- Overlay Circle 2: Font Controls -->
+                            <div class="absolute bottom-4 right-4 w-56 p-4 glass-panel rounded-2xl border border-brand-border shadow-2xl transform rotate-3">
+                                <span class="text-[10px] text-gray-400 block mb-2 font-bold uppercase tracking-wider">Typography Scale</span>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between text-[10px]">
+                                        <span>Size: 18px</span>
+                                        <span class="text-brand">Optimal</span>
+                                    </div>
+                                    <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                        <div class="w-2/3 h-full bg-brand"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Left: Text Summary -->
+                    <div class="w-full lg:w-1/2">
+                        <div class="text-brand text-xs font-bold uppercase tracking-widest mb-3">Hyper-Customization</div>
+                        <h3 id="row-b-title" class="text-3xl md:text-4xl font-extrabold mb-6 leading-tight">Tailored to Your Reading Preferences</h3>
+                        <p id="row-b-desc" class="text-gray-300 leading-relaxed mb-8">
+                            Everyone processes written information differently. Focus Reader provides a micro-control interface allowing you to customize font sizes, column widths, line spacing, and color palettes (including Sepia and ultra-dark OLED modes) with instant hotkey integration.
+                        </p>
+                        <ul class="space-y-4">
+                            <li class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-brand mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                <span>Keyboard shortcuts for instant formatting activation</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-brand mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                <span>Smart estimated reading time metrics on every page</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- COMPONENT 4: PREMIUM ASSET MATRIX (MARKET/FEATURE GRID) -->
+        <section id="specs" class="py-24 px-6 bg-brand-card/30 border-y border-brand-border">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 id="matrix-title" class="text-3xl md:text-5xl font-extrabold mb-4">Core Specifications</h2>
+                    <p id="matrix-desc" class="text-gray-400 max-w-2xl mx-auto">Engineered for speed, built for security, and optimized for seamless Chrome browser integration.</p>
+                </div>
+
+                <!-- 4-Column Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    
+                    <!-- Card 1: Offline Engine -->
+                    <div class="glass-panel p-6 rounded-2xl border border-brand-border hover:border-brand/30 transition-all group flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand mb-6">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-bold mb-2">Offline Engine</h3>
+                            <p class="text-xs text-gray-400 leading-relaxed mb-4">Works seamlessly without internet access. Parse saved articles anywhere, even in airplane mode.</p>
+                        </div>
+                        <div>
+                            <div class="text-xs text-brand font-mono mb-4">STATUS: 100% LOCAL</div>
+                            <!-- Minimalist Sparkline SVG -->
+                            <svg class="w-full h-8 text-brand/30" viewBox="0 0 100 30" preserveAspectRatio="none">
+                                <path d="M0 20 Q 25 5, 50 25 T 100 10" fill="none" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Zero Tracking -->
+                    <div class="glass-panel p-6 rounded-2xl border border-brand-border hover:border-brand/30 transition-all group flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand mb-6">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.33 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-bold mb-2">Zero Tracking</h3>
+                            <p class="text-xs text-gray-400 leading-relaxed mb-4">We do not collect, store, or transmit data. Your parsing triggers and history never leave your device.</p>
+                        </div>
+                        <div>
+                            <div class="text-xs text-brand font-mono mb-4">TELEMETRY: 0KB SENT</div>
+                            <!-- Minimalist Sparkline SVG -->
+                            <svg class="w-full h-8 text-brand/30" viewBox="0 0 100 30" preserveAspectRatio="none">
+                                <path d="M0 15 L 20 15 L 40 15 L 60 15 L 80 15 L 100 15" fill="none" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Local Storage -->
+                    <div class="glass-panel p-6 rounded-2xl border border-brand-border hover:border-brand/30 transition-all group flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand mb-6">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-bold mb-2">IndexedDB Cache</h3>
+                            <p class="text-xs text-gray-400 leading-relaxed mb-4">Utilizes secure local sandboxed browser databases to cache parsed articles instantly.</p>
+                        </div>
+                        <div>
+                            <div class="text-xs text-brand font-mono mb-4">DB STORAGE: ENCRYPTED</div>
+                            <!-- Minimalist Sparkline SVG -->
+                            <svg class="w-full h-8 text-brand/30" viewBox="0 0 100 30" preserveAspectRatio="none">
+                                <path d="M0 25 Q 30 5, 60 20 T 100 5" fill="none" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: Minimalist Design -->
+                    <div class="glass-panel p-6 rounded-2xl border border-brand-border hover:border-brand/30 transition-all group flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand mb-6">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-bold mb-2">Fluid UI System</h3>
+                            <p class="text-xs text-gray-400 leading-relaxed mb-4">Zero bloat. Our stylesheet is optimized to run under 40ms, causing zero Cumulative Layout Shift.</p>
+                        </div>
+                        <div>
+                            <div class="text-xs text-brand font-mono mb-4">LATENCY: < 40MS</div>
+                            <!-- Minimalist Sparkline SVG -->
+                            <svg class="w-full h-8 text-brand/30" viewBox="0 0 100 30" preserveAspectRatio="none">
+                                <path d="M0 10 L 10 12 L 20 5 L 30 28 L 40 15 L 100 10" fill="none" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- COMPONENT 5: 3D PRODUCT SHOWCASE DIVIDER -->
+        <section class="py-20 px-6 relative overflow-hidden flex items-center justify-center bg-gradient-to-r from-brand-dark via-gray-950 to-brand-dark">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,255,157,0.05)_0%,transparent_60%)] pointer-events-none"></div>
+            
+            <div class="max-w-4xl mx-auto text-center relative z-10">
+                <!-- Glowing 3D Glassmorphic Monolith/E-Reader Preview -->
+                <div class="relative inline-block mb-12">
+                    <div class="absolute inset-0 bg-brand/20 rounded-3xl blur-2xl transform scale-95 animate-pulse-slow"></div>
+                    <div class="relative w-64 h-80 glass-panel rounded-3xl border border-brand/40 p-6 flex flex-col justify-between shadow-[0_10px_50px_rgba(0,255,157,0.15)] transform hover:rotate-y-12 transition-transform duration-500">
+                        <div class="flex justify-between items-center text-[10px] text-brand font-mono">
+                            <span>FOCUS READER V2.0</span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-brand"></span>
+                        </div>
+                        <div class="space-y-4 my-auto text-left">
+                            <div class="h-4 bg-brand/20 rounded w-3/4"></div>
+                            <div class="h-2 bg-gray-700 rounded w-full"></div>
+                            <div class="h-2 bg-gray-700 rounded w-5/6"></div>
+                            <div class="h-2 bg-gray-700 rounded w-4/5"></div>
+                        </div>
+                        <div class="text-[10px] text-gray-500 text-center uppercase tracking-widest font-bold">
+                            Client-Side Sandbox
+                        </div>
+                    </div>
+                </div>
+
+                <h2 id="showcase-title" class="text-2xl md:text-4xl font-extrabold mb-4">Engineered for distraction-free intellectual depth.</h2>
+                <p id="showcase-desc" class="text-gray-400 max-w-xl mx-auto text-sm">Experience the web the way it was originally intended: semantic, clean, and highly performant.</p>
+            </div>
+        </section>
+
+        <!-- COMPONENT 6: CONVERSIONAL CALL-TO-ACTION (CTA) -->
+        <section id="download" class="py-24 px-6 relative overflow-hidden">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,255,157,0.06)_0%,transparent_70%)] pointer-events-none"></div>
+            <div class="max-w-4xl mx-auto glass-panel rounded-3xl p-10 md:p-16 border border-brand/20 relative z-10 text-center">
+                <h2 id="cta-title" class="text-3xl md:text-5xl font-extrabold mb-6">Ready to transform your reading experience?</h2>
+                <p id="cta-desc" class="text-gray-300 max-w-2xl mx-auto mb-10 leading-relaxed text-base md:text-lg">
+                    Install Focus Reader on your Google Chrome browser today. Completely free, offline-first, and fully committed to protecting your privacy.
+                </p>
+
+                <!-- Centered Email/Download Container with Stark Button -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
+                    <a href="https://chromewebstore.google.com" target="_blank" rel="noopener noreferrer" class="w-full inline-flex items-center justify-center gap-3 bg-brand hover:bg-emerald-400 text-brand-dark px-8 py-4 rounded-xl font-extrabold text-base transition-all shadow-[0_8px_30px_rgba(0,255,157,0.3)] hover:shadow-[0_8px_35px_rgba(0,255,157,0.5)]" aria-label="Install Focus Reader from the Chrome Web Store">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z"/>
+                        </svg>
+                        <span id="cta-btn-text">Add to Chrome — Free</span>
+                    </a>
+                </div>
+
+                <div class="mt-6 text-xs text-gray-500">
+                    <span>Compatible with Chrome, Brave, Edge, and Opera.</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- DEEP CORPORATE FOOTER -->
+    <footer class="bg-gray-950 border-t border-brand-border py-16 px-6 relative z-10">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+                <!-- Branding Block -->
+                <div class="md:col-span-2">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-brand-dark font-extrabold">F</div>
+                        <span class="text-base font-extrabold tracking-tight">FOCUS READER</span>
+                    </div>
+                    <p id="footer-desc" class="text-sm text-gray-400 max-w-sm leading-relaxed mb-6">
+                        An open-source, client-side browser utility dedicated to preserving human attention and digital privacy.
+                    </p>
+                </div>
+
+                <!-- Navigation Columns -->
+                <div>
+                    <h4 class="text-xs font-bold text-gray-300 uppercase tracking-widest mb-4">Product</h4>
+                    <ul class="space-y-2.5 text-sm text-gray-500">
+                        <li><a href="#features" class="hover:text-brand transition-colors">Features</a></li>
+                        <li><a href="#preview" class="hover:text-brand transition-colors">Interactive Demo</a></li>
+                        <li><a href="#specs" class="hover:text-brand transition-colors">Specifications</a></li>
+                    </ul>
+                </div>
+
+                <!-- Legal & Support Columns (CRITICAL) -->
+                <div>
+                    <h4 class="text-xs font-bold text-gray-300 uppercase tracking-widest mb-4">Legal & Support</h4>
+                    <ul class="space-y-2.5 text-sm text-gray-500">
+                        <li><button type="button" onclick="openModal('privacy-modal')" class="hover:text-brand transition-colors text-left" aria-label="Open Privacy Policy">Privacy Policy</button></li>
+                        <li><button type="button" onclick="openModal('terms-modal')" class="hover:text-brand transition-colors text-left" aria-label="Open Terms of Service">Terms of Service</button></li>
+                        <li><button type="button" onclick="openModal('support-modal')" class="hover:text-brand transition-colors text-left" aria-label="Open Support & Contact">Support & Contact</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Bottom Corporate Block -->
+            <div class="pt-8 border-t border-brand-border/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
+                <div>
+                    <span>&copy; <span id="current-year">2026</span> Focus Reader. All rights reserved.</span>
+                </div>
+                <div class="flex gap-6">
+                    <a href="#" class="hover:text-brand transition-colors" aria-label="GitHub Repository">GitHub</a>
+                    <a href="#" class="hover:text-brand transition-colors" aria-label="Chrome Web Store Profile">Chrome Web Store</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ========================================================= -->
+    <!-- COMPLIANT MODAL WINDOWS (POPUP INTERFACES) -->
+    <!-- ========================================================= -->
+
+    <!-- MODAL 1: PRIVACY POLICY -->
+    <div id="privacy-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
+        <div class="bg-[#0b0f19] border border-brand-border rounded-2xl max-w-2xl w-full p-6 md:p-8 max-h-[85vh] overflow-y-auto relative shadow-2xl">
+            <!-- Close Button -->
+            <button onclick="closeModal('privacy-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-brand transition-colors" aria-label="Close Modal">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            
+            <h3 id="privacy-title" class="text-2xl font-extrabold mb-6 text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.33 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                Privacy Policy
+            </h3>
+            
+            <div class="prose prose-invert text-sm text-gray-300 space-y-4 leading-relaxed">
+                <p class="font-bold text-brand">Last Updated: October 2026</p>
+                <p class="border-l-2 border-brand pl-4 italic bg-brand/5 py-2 rounded-r">
+                    "Focus Reader operates completely offline. We do not collect, store, or transmit any user data. Saved articles are kept locally on your device."
+                </p>
+                <h4 class="text-base font-bold text-white mt-6">1. Information Collection and Use</h4>
+                <p>Focus Reader is built with a zero-telemetry architecture. We do not require account creation, and we do not collect any personal data, browsing history, or analytical metrics. The extension processes text structures directly inside your local browser memory space.</p>
+                
+                <h4 class="text-base font-bold text-white mt-6">2. Local Storage Implementation</h4>
+                <p>Any articles or preferences saved by the user are stored locally within the browser's sandboxed storage mechanism (such as <code>chrome.storage.local</code> or <code>IndexedDB</code>). This data is completely isolated and cannot be accessed by external parties or servers.</p>
+                
+                <h4 class="text-base font-bold text-white mt-6">3. Third-Party Services</h4>
+                <p>The extension does not communicate with third-party APIs, analytic software, or external tracking pixels. Your reading behavior remains 100% private to you.</p>
+                
+                <h4 class="text-base font-bold text-white mt-6">4. Compliance and Safety</h4>
+                <p>This policy is designed to strictly comply with the Google Chrome Web Store Developer Terms, ensuring high standards of user trust and data safety.</p>
+            </div>
+            
+            <div class="mt-8 pt-4 border-t border-brand-border flex justify-end">
+                <button onclick="closeModal('privacy-modal')" class="bg-brand hover:bg-emerald-400 text-brand-dark px-6 py-2 rounded-xl font-bold text-sm transition-all">I Understand</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: TERMS OF SERVICE -->
+    <div id="terms-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="terms-title">
+        <div class="bg-[#0b0f19] border border-brand-border rounded-2xl max-w-2xl w-full p-6 md:p-8 max-h-[85vh] overflow-y-auto relative shadow-2xl">
+            <!-- Close Button -->
+            <button onclick="closeModal('terms-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-brand transition-colors" aria-label="Close Modal">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            
+            <h3 id="terms-title" class="text-2xl font-extrabold mb-6 text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                Terms of Service
+            </h3>
+            
+            <div class="prose prose-invert text-sm text-gray-300 space-y-4 leading-relaxed">
+                <p class="font-bold text-brand">Last Updated: October 2026</p>
+                <h4 class="text-base font-bold text-white mt-6">1. Acceptance of Terms</h4>
+                <p>By installing and utilizing the Focus Reader Chrome Extension, you agree to these Terms of Service. If you do not agree, please uninstall the extension immediately.</p>
+                
+                <h4 class="text-base font-bold text-white mt-6">2. License Grant</h4>
+                <p>We grant you a personal, non-exclusive, non-transferable, and revocable license to use Focus Reader solely for personal, non-commercial reading purposes in accordance with these terms.</p>
+                
+                <h4 class="text-base font-bold text-white mt-6">3. Disclaimer of Warranties</h4>
+                <p>Focus Reader is provided "as is" and "as available" without warranties of any kind, either express or implied. We do not guarantee that the formatting engine will render every web article perfectly, as web layouts are subject to frequent structural variations.</p>
+                
+                <h4 class="text-base font-bold text-white mt-6">4. Limitations of Liability</h4>
+                <p>In no event shall Focus Reader developers be liable for any direct, indirect, incidental, or consequential damages arising from the use or inability to use the software application.</p>
+            </div>
+            
+            <div class="mt-8 pt-4 border-t border-brand-border flex justify-end">
+                <button onclick="closeModal('terms-modal')" class="bg-brand hover:bg-emerald-400 text-brand-dark px-6 py-2 rounded-xl font-bold text-sm transition-all">Accept Terms</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: SUPPORT & CONTACT -->
+    <div id="support-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="support-title">
+        <div class="bg-[#0b0f19] border border-brand-border rounded-2xl max-w-md w-full p-6 md:p-8 relative shadow-2xl">
+            <!-- Close Button -->
+            <button onclick="closeModal('support-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-brand transition-colors" aria-label="Close Modal">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            
+            <h3 id="support-title" class="text-2xl font-extrabold mb-4 text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                Support & Contact
+            </h3>
+            
+            <p class="text-sm text-gray-300 mb-6 leading-relaxed">
+                Need help with Focus Reader? Have a feature request or found a bug? Reach out to our open-source support team.
+            </p>
+            
+            <form id="support-form" onsubmit="handleSupportSubmit(event)" class="space-y-4">
+                <div>
+                    <label for="support-email" class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Your Email</label>
+                    <input type="email" id="support-email" required class="w-full bg-brand-dark border border-brand-border focus:border-brand rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-all" placeholder="name@example.com">
+                </div>
+                <div>
+                    <label for="support-message" class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Message</label>
+                    <textarea id="support-message" required rows="4" class="w-full bg-brand-dark border border-brand-border focus:border-brand rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-all" placeholder="How can we help you?"></button></textarea>
+                </div>
+                <button type="submit" class="w-full bg-brand hover:bg-emerald-400 text-brand-dark font-bold py-3.5 rounded-xl text-sm transition-all shadow-[0_4px_20px_rgba(0,255,157,0.2)]">
+                    Send Message
+                </button>
+            </form>
+            
+            <!-- Success Message (Hidden initially) -->
+            <div id="support-success" class="hidden text-center py-6">
+                <div class="w-12 h-12 rounded-full bg-brand/10 text-brand flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                </div>
+                <h4 class="text-lg font-bold text-white mb-2">Message Sent!</h4>
+                <p class="text-xs text-gray-400">Thank you for reaching out. We will get back to you shortly.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- VANILLA JAVASCRIPT SYSTEM -->
+    <!-- ========================================================= -->
+    <script>
+        // Set current year in footer dynamically
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        // Modal State Management
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
+                
+                // Add keydown listener for ESC key to close modal
+                document.addEventListener('keydown', handleEscKey);
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+                
+                // Remove ESC key listener
+                document.removeEventListener('keydown', handleEscKey);
+                
+                // Reset support form if closing support modal
+                if (modalId === 'support-modal') {
+                    setTimeout(() => {
+                        document.getElementById('support-form').classList.remove('hidden');
+                        document.getElementById('support-success').classList.add('hidden');
+                        document.getElementById('support-form').reset();
+                    }, 300);
+                }
+            }
+        }
+
+        function handleEscKey(event) {
+            if (event.key === 'Escape') {
+                const activeModal = document.querySelector('[role="dialog"]:not(.hidden)');
+                if (activeModal) {
+                    closeModal(activeModal.id);
+                }
+            }
+        }
+
+        // Close modal when clicking outside content area
+        window.onclick = function(event) {
+            if (event.target.getAttribute('role') === 'dialog') {
+                closeModal(event.target.id);
+            }
+        }
+
+        // Support Form Submission Handler
+        function handleSupportSubmit(event) {
+            event.preventDefault();
+            
+            // Simulate API transmission delay
+            const form = document.getElementById('support-form');
+            const successMsg = document.getElementById('support-success');
+            
+            form.classList.add('hidden');
+            successMsg.classList.remove('hidden');
+        }
+
+        // Language / Direction Translation System (Arabic RTL Support)
+        const translations = {
+            en: {
+                badge: "Zero Trackers. Pure Reading.",
+                title: "Turn cluttered articles into clean, distraction-free text.",
+                desc: "Say goodbye to ads, cookie popups, and visual clutter. Experience high-performance, private, offline-first reading with a single click.",
+                ctaPrimary: "Add to Chrome — It's Free",
+                ctaSecondary: "Try Interactive Demo",
+                stat1: "Data Transmitted",
+                stat2: "Offline First",
+                stat3: "Trackers or Ads",
+                previewTitle: "Cluttered Web vs. Clean Focus",
+                previewDesc: "See how Focus Reader transforms chaotic, ad-heavy layouts into a beautiful, distraction-free typography system instantly.",
+                beforeLabel: "Before: Distracted & Slow",
+                afterLabel: "After: Pure Focus (0.01s Load)",
+                rowATitle: "Zero Tracking, Zero Data Collection. Period.",
+                rowADesc: "Unlike other extensions that harvest reading habits, browser history, and telemetry to monetize your data, Focus Reader operates with a strict Zero-Knowledge protocol. Your saved articles are kept locally on your device's isolated storage.",
+                rowBTitle: "Tailored to Your Reading Preferences",
+                rowBDesc: "Everyone processes written information differently. Focus Reader provides a micro-control interface allowing you to customize font sizes, column widths, line spacing, and color palettes (including Sepia and ultra-dark OLED modes) with instant hotkey integration.",
+                matrixTitle: "Core Specifications",
+                matrixDesc: "Engineered for speed, built for security, and optimized for seamless Chrome browser integration.",
+                showcaseTitle: "Engineered for distraction-free intellectual depth.",
+                showcaseDesc: "Experience the web the way it was originally intended: semantic, clean, and highly performant.",
+                ctaTitle: "Ready to transform your reading experience?",
+                ctaDesc: "Install Focus Reader on your Google Chrome browser today. Completely free, offline-first, and fully committed to protecting your privacy.",
+                ctaBtnText: "Add to Chrome — Free",
+                footerDesc: "An open-source, client-side browser utility dedicated to preserving human attention and digital privacy.",
+                langText: "العربية (AR)"
+            },
+            ar: {
+                badge: "بدون تتبع. قراءة نقية.",
+                title: "حوّل المقالات المزدحمة إلى نصوص نظيفة وخالية من التشتيت.",
+                desc: "وداعاً للإعلانات، والمنبثقات، والفوضى البصرية. اختبر قراءة عالية الأداء، خاصة، وتعمل بالكامل بدون إنترنت بنقرة واحدة.",
+                ctaPrimary: "أضف إلى كروم — مجاناً",
+                ctaSecondary: "جرب العرض التفاعلي",
+                stat1: "بيانات مرسلة",
+                stat2: "يعمل بدون إنترنت",
+                stat3: "إعلانات أو متتبعات",
+                previewTitle: "الويب الفوضوي مقابل التركيز النقي",
+                previewDesc: "شاهد كيف يقوم فوكس ريدر بتحويل الصفحات الفوضوية والمليئة بالإعلانات إلى نظام كتابة منسق وجميل فوراً.",
+                beforeLabel: "قبل: مشتت وبطيء",
+                afterLabel: "بعد: تركيز نقي (تحميل في 0.01 ثانية)",
+                rowATitle: "صفر تتبع، صفر جمع بيانات. دائماً.",
+                rowADesc: "على عكس الإضافات الأخرى التي تجمع عادات القراءة وتاريخ التصفح لبيع بياناتك، يعمل فوكس ريدر ببروتوكول صارم يمنع جمع البيانات. تُحفظ مقالاتك محلياً على جهازك فقط.",
+                rowBTitle: "مخصص بالكامل لتفضيلاتك في القراءة",
+                rowBDesc: "كل شخص يستوعب المعلومات بشكل مختلف. يوفر فوكس ريدر واجهة تحكم دقيقة تتيح لك تخصيص حجم الخط، وعرض العمود، وتباعد الأسطر، وأنماط الألوان (بما في ذلك وضع السيبيا والوضع الداكن OLED).",
+                matrixTitle: "المواصفات الأساسية",
+                matrixDesc: "تم تصميمه للسرعة، وبني للأمان، ومحسن للاندماج السلس مع متصفح كروم.",
+                showcaseTitle: "مصمم لعمق فكري خالٍ من التشتيت.",
+                showcaseDesc: "اختبر الويب بالطريقة التي كان من المفترض أن يكون عليها: منسق، نظيف، وعالي الأداء.",
+                ctaTitle: "هل أنت مستعد لتغيير تجربتك في القراءة؟",
+                ctaDesc: "قم بتثبيت فوكس ريدر على متصفح جوجل كروم اليوم. مجاني بالكامل، يعمل بدون إنترنت، وملتزم تماماً بحماية خصوصيتك.",
+                ctaBtnText: "أضف إلى كروم — مجاناً",
+                footerDesc: "أداة متصفح مفتوحة المصدر تعمل بالكامل في جانب العميل، مخصصة للحفاظ على التركيز البشري والخصوصية الرقمية.",
+                langText: "English (EN)"
+            }
+        };
+
+        const langToggleBtn = document.getElementById('lang-toggle');
+        const langText = document.getElementById('lang-text');
+        let currentLang = 'en';
+
+        langToggleBtn.addEventListener('click', () => {
+            currentLang = currentLang === 'en' ? 'ar' : 'en';
+            
+            // Set HTML Direction & Lang attribute
+            const htmlTag = document.documentElement;
+            htmlTag.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+            htmlTag.setAttribute('lang', currentLang);
+
+            // Update Text Elements
+            document.getElementById('lang-text').textContent = translations[currentLang].langText;
+            document.getElementById('hero-badge').textContent = translations[currentLang].badge;
+            document.getElementById('hero-title').textContent = translations[currentLang].title;
+            document.getElementById('hero-desc').textContent = translations[currentLang].desc;
+            document.getElementById('cta-primary').textContent = translations[currentLang].ctaPrimary;
+            document.getElementById('cta-secondary').textContent = translations[currentLang].ctaSecondary;
+            
+            document.getElementById('stat-1').textContent = translations[currentLang].stat1;
+            document.getElementById('stat-2').textContent = translations[currentLang].stat2;
+            document.getElementById('stat-3').textContent = translations[currentLang].stat3;
+
+            document.getElementById('preview-title').textContent = translations[currentLang].previewTitle;
+            document.getElementById('preview-desc').textContent = translations[currentLang].previewDesc;
+            document.getElementById('before-label').textContent = translations[currentLang].beforeLabel;
+            document.getElementById('after-label').textContent = translations[currentLang].afterLabel;
+
+            document.getElementById('row-a-title').textContent = translations[currentLang].rowATitle;
+            document.getElementById('row-a-desc').textContent = translations[currentLang].rowADesc;
+            document.getElementById('row-b-title').textContent = translations[currentLang].rowBTitle;
+            document.getElementById('row-b-desc').textContent = translations[currentLang].rowBDesc;
+
+            document.getElementById('matrix-title').textContent = translations[currentLang].matrixTitle;
+            document.getElementById('matrix-desc').textContent = translations[currentLang].matrixDesc;
+
+            document.getElementById('showcase-title').textContent = translations[currentLang].showcaseTitle;
+            document.getElementById('showcase-desc').textContent = translations[currentLang].showcaseDesc;
+
+            document.getElementById('cta-title').textContent = translations[currentLang].ctaTitle;
+            document.getElementById('cta-desc').textContent = translations[currentLang].ctaDesc;
+            document.getElementById('cta-btn-text').textContent = translations[currentLang].ctaBtnText;
+            document.getElementById('footer-desc').textContent = translations[currentLang].footerDesc;
+        });
+    </script>
+</body>
+</html>
